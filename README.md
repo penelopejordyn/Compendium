@@ -57,10 +57,6 @@ Compendium is a powerful infinite canvas note-taking app designed for students a
 - **Efficient rendering** for smooth infinite canvas performance
 - **Local data persistence** with Codable support
 
-## 📄 License
-
-[Add your license here]
-
 ## 🤝 Contributing
 
 Contributions are welcome! Please feel free to submit a Pull Request.
