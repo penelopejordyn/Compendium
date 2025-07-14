@@ -5,8 +5,19 @@ import UIKit
 class CardPKCanvasView: PKCanvasView {
     var isEditing: Bool = false {
         didSet {
-            self.isUserInteractionEnabled = isEditing
+            // Instead of disabling user interaction entirely, we'll override hit testing
+            self.isUserInteractionEnabled = true
         }
+    }
+    
+    override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+        // If we're not in edit mode, don't capture touch events - let them pass through
+        if !isEditing {
+            return nil
+        }
+        
+        // If we are in edit mode, handle touches normally
+        return super.hitTest(point, with: event)
     }
 }
 

@@ -17,7 +17,7 @@ struct ChalkboardView: View {
     @State private var toolPosition: CGPoint = CGPoint(x: UIScreen.main.bounds.width/2,
                                                        y: UIScreen.main.bounds.height/2)
     @State private var dragOffset = CGSize.zero
-    @State private var toolButtonPosition = CGPoint(x: UIScreen.main.bounds.width - 60, 
+    @State private var toolButtonPosition = CGPoint(x: UIScreen.main.bounds.width - 60,
                                                     y: UIScreen.main.bounds.height - 100)
     @State private var lastDrawingPoint: CGPoint = .zero
     @State private var isToolPositionLocked = false
@@ -50,7 +50,7 @@ struct ChalkboardView: View {
         _cards = State(initialValue: chalkboard.cards)
         
         let isNewChalkboard = chalkboard.drawing.bounds.isEmpty && chalkboard.cards.isEmpty
-        let centerOffset = isNewChalkboard ? 
+        let centerOffset = isNewChalkboard ?
         CGPoint(x: 450000, y: 450000) :
         (chalkboard.canvasOffset == .zero ? CGPoint(x: 450000, y: 450000) : chalkboard.canvasOffset)
         
@@ -83,10 +83,10 @@ struct ChalkboardView: View {
                     saveChalkboardState()
                 }
             }
-            .onChange(of: chalkboard.cards) { _, newCards in 
-                cards = newCards 
+            .onChange(of: chalkboard.cards) { _, newCards in
+                cards = newCards
             }
-            .onReceive(store.objectWillChange) { _ in 
+            .onReceive(store.objectWillChange) { _ in
                 if let updatedChalkboard = store.chalkboards.first(where: { $0.id == chalkboard.id }) {
                     cards = updatedChalkboard.cards
                 }
@@ -124,7 +124,7 @@ struct ChalkboardView: View {
             canvasState.offset = newOffset
             markUnsavedChanges()
         }
-        .onChange(of: canvasScale) { _, newScale in 
+        .onChange(of: canvasScale) { _, newScale in
             currentZoom = newScale
             canvasState.scale = newScale
             markUnsavedChanges()
@@ -305,6 +305,9 @@ struct ChalkboardView: View {
             for index in cards.indices {
                 cards[index].isEditing = false
             }
+            // Mark changes and save to prevent state loss when deselecting cards
+            markUnsavedChanges()
+            saveChalkboardState()
         }
         // Reset the navigation flag after handling tap
         isNavigatingToCard = false
@@ -359,13 +362,27 @@ struct ChalkboardView: View {
     
     // MARK: - Card Management
     private func handleCardTap(cardId: UUID) {
-        for index in cards.indices {
-            cards[index].isEditing = false
-        }
-        
+        // Find the tapped card
         if let index = cards.firstIndex(where: { $0.id == cardId }) {
-            cards[index].isEditing = true
-            activeCard = cardId
+            let wasEditing = cards[index].isEditing
+            
+            // First, exit edit mode for all cards
+            for cardIndex in cards.indices {
+                cards[cardIndex].isEditing = false
+            }
+            
+            // If the tapped card wasn't editing, enter edit mode for it
+            if !wasEditing {
+                cards[index].isEditing = true
+                activeCard = cardId
+            } else {
+                // If it was editing, keep it in non-edit mode
+                activeCard = nil
+            }
+            
+            // Mark changes and save immediately to prevent state loss
+            markUnsavedChanges()
+            saveChalkboardState()
         }
     }
     

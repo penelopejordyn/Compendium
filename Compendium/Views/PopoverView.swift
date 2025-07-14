@@ -336,6 +336,13 @@ struct PopoverView: View {
             }
             
             Button {
+                toggleCardLock(card)
+            } label: {
+                Label(card.isLocked ? "Unlock Card" : "Lock Card", 
+                      systemImage: card.isLocked ? "lock.open" : "lock")
+            }
+            
+            Button {
                 navigateToCard(card)
             } label: {
                 Label("Go to Card", systemImage: "arrow.right")
@@ -388,6 +395,12 @@ struct PopoverView: View {
         
         cards.append(newCard)
         currentTab = .cards
+    }
+    
+    private func toggleCardLock(_ card: Card) {
+        if let index = cards.firstIndex(where: { $0.id == card.id }) {
+            cards[index].isLocked.toggle()
+        }
     }
 }
 

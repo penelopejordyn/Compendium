@@ -11,7 +11,9 @@ extension Card: Hashable {
         lhs.opacity == rhs.opacity &&
         lhs.isEditing == rhs.isEditing &&
         lhs.background == rhs.background &&
-        lhs.allowFingerDrag == rhs.allowFingerDrag  // Add this line
+        lhs.allowFingerDrag == rhs.allowFingerDrag &&
+        lhs.isLocked == rhs.isLocked &&
+        lhs.drawing.bounds == rhs.drawing.bounds  // Fast bounds comparison
         // Note: We intentionally exclude drawing from equality check
         // as it would be too expensive to compare and isn't needed
         // for view updates
@@ -33,6 +35,7 @@ struct Card: Identifiable, Equatable, Codable {
     var isEditing: Bool
     var background: CardBackground
     var allowFingerDrag: Bool = true  // Add this property
+    var isLocked: Bool = false // Add isLocked property
     
     init(
         id: UUID = UUID(),
@@ -42,7 +45,8 @@ struct Card: Identifiable, Equatable, Codable {
         opacity: Double = 1.0,
         isEditing: Bool = false,
         background: CardBackground = .default,
-        allowFingerDrag: Bool = true  // Add this parameter
+        allowFingerDrag: Bool = true,  // Add this parameter
+        isLocked: Bool = false // Add isLocked parameter
     ) {
         self.id = id
         self.drawing = PKDrawing()
@@ -53,11 +57,12 @@ struct Card: Identifiable, Equatable, Codable {
         self.isEditing = isEditing
         self.background = background
         self.allowFingerDrag = allowFingerDrag
+        self.isLocked = isLocked
     }
     
     // Update Codable implementation...
     enum CodingKeys: String, CodingKey {
-        case id, drawing, position, size, backgroundColor, opacity, isEditing, background, allowFingerDrag
+        case id, drawing, position, size, backgroundColor, opacity, isEditing, background, allowFingerDrag, isLocked
     }
     
     // Update encode method
@@ -72,6 +77,7 @@ struct Card: Identifiable, Equatable, Codable {
         try container.encode(isEditing, forKey: .isEditing)
         try container.encode(background, forKey: .background)
         try container.encode(allowFingerDrag, forKey: .allowFingerDrag)
+        try container.encode(isLocked, forKey: .isLocked) // Encode isLocked
     }
     
     // Update init(from:) method
@@ -86,8 +92,9 @@ struct Card: Identifiable, Equatable, Codable {
         self.opacity = try container.decode(Double.self, forKey: .opacity)
         self.isEditing = try container.decode(Bool.self, forKey: .isEditing)
         self.background = try container.decode(CardBackground.self, forKey: .background)
-        // Decode allowFingerDrag if it exists, otherwise default to true
+        // Decode allowFingerDrag and isLocked if they exist, otherwise use default values
         self.allowFingerDrag = try container.decodeIfPresent(Bool.self, forKey: .allowFingerDrag) ?? true
+        self.isLocked = try container.decodeIfPresent(Bool.self, forKey: .isLocked) ?? false
     }
 }
 
@@ -103,7 +110,8 @@ extension Card {
             opacity: opacity,
             isEditing: false,
             background: background,
-            allowFingerDrag: allowFingerDrag
+            allowFingerDrag: allowFingerDrag,
+            isLocked: isLocked // Copy isLocked state
         )
     }
     
@@ -114,6 +122,7 @@ extension Card {
         opacity = 1.0
         isEditing = false
         allowFingerDrag = true
+        isLocked = false // Reset isLocked to false
     }
 }
 

@@ -13,11 +13,13 @@ struct CardView: View {
     
     @State private var showingColorPicker = false
     @State private var showBackgroundSettings = false
+    @State private var isDragging = false
+    @State private var dragOffset = CGSize.zero
     
     private var adjustedPosition: CGPoint {
         CGPoint(
-            x: (card.position.x * canvasScale) - canvasOffset.x,
-            y: (card.position.y * canvasScale) - canvasOffset.y
+            x: (card.position.x * canvasScale) - canvasOffset.x + dragOffset.width,
+            y: (card.position.y * canvasScale) - canvasOffset.y + dragOffset.height
         )
     }
     
@@ -36,45 +38,36 @@ struct CardView: View {
     
     var body: some View {
         ZStack {
-            // Use the simple direct touch handler with debug prints
-            SimpleTouchCardView(
-                card: $card,
-                tool: tool,
-                color: color,
-                lineWidth: lineWidth,
-                canvasOffset: $canvasOffset,
-                canvasScale: $canvasScale,
-                onDelete: onDelete
-            )
-            .clipShape(RoundedRectangle(cornerRadius: 8))
+            // Main card content
+            cardContent
             
-            // Menu and editing controls - only visible in edit mode
+            // Edit mode controls - only visible when editing
             if card.isEditing {
-                // Menu button
+                editModeControls
+            }
+            
+            // Lock indicator - show when card is locked
+            if card.isLocked {
                 VStack {
-                    Spacer().frame(height: 8)
-                    CardMenuButton(
-                        showingColorPicker: $showingColorPicker,
-                        showBackgroundSettings: $showBackgroundSettings,
-                        backgroundColor: $card.backgroundColor,
-                        background: $card.background,
-                        onDelete: onDelete
-                    )
+                    HStack {
+                        Image(systemName: "lock.fill")
+                            .foregroundColor(.white)
+                            .font(.system(size: 12))
+                            .padding(4)
+                            .background(Circle().fill(Color.black.opacity(0.6)))
+                        Spacer()
+                    }
                     Spacer()
                 }
-                .zIndex(100) // Ensure on top
-                
-                // Resize handles
-                ResizeHandles(
-                    size: $card.size,
-                    originalImageSize: card.background.style == .image ? card.background.originalImageSize : nil
-                )
-                .zIndex(100) // Ensure on top
+                .padding(8)
             }
         }
         .frame(width: cardSize.width, height: cardSize.height)
         .scaleEffect(canvasScale)
         .position(adjustedPosition)
+        .opacity(card.opacity)
+        .allowsHitTesting(!card.isLocked)  // Make card transparent to touches when locked
+        .gesture(cardDragGesture)
         .popover(isPresented: $showingColorPicker) {
             ColorPickerView(
                 backgroundColor: $card.backgroundColor,
@@ -90,6 +83,86 @@ struct CardView: View {
             }
             .frame(width: 300, height: 500)
         }
+    }
+    
+    private var cardContent: some View {
+        ZStack {
+            // Background
+            RoundedRectangle(cornerRadius: 8)
+                .fill(card.backgroundColor)
+                .stroke(card.isEditing ? Color.blue : Color.clear, lineWidth: 2)
+            
+            // Background pattern/image
+            if card.background.style != .none {
+                CardBackgroundView(
+                    background: card.background,
+                    size: cardSize
+                )
+                .clipShape(RoundedRectangle(cornerRadius: 8))
+            }
+            
+            // Drawing canvas - always present but only interactive when in edit mode
+            PKCardCanvasView(
+                drawing: $card.drawing,
+                tool: tool,
+                color: color,
+                lineWidth: lineWidth,
+                isEditing: card.isEditing,
+                cardId: card.id
+            )
+            .clipShape(RoundedRectangle(cornerRadius: 8))
+            .allowsHitTesting(card.isEditing)
+        }
+    }
+    
+    private var editModeControls: some View {
+        ZStack {
+            // Menu button
+            VStack {
+                HStack {
+                    Spacer()
+                    CardMenuButton(
+                        showingColorPicker: $showingColorPicker,
+                        showBackgroundSettings: $showBackgroundSettings,
+                        backgroundColor: $card.backgroundColor,
+                        background: $card.background,
+                        onDelete: onDelete
+                    )
+                    .padding(8)
+                }
+                Spacer()
+            }
+            
+            // Resize handles
+            ResizeHandles(
+                size: $card.size,
+                originalImageSize: card.background.style == .image ? card.background.originalImageSize : nil
+            )
+        }
+        .allowsHitTesting(true)
+    }
+    
+    private var cardDragGesture: some Gesture {
+        DragGesture()
+            .onChanged { value in
+                // Only allow dragging when in edit mode and allowFingerDrag is true
+                if card.isEditing && card.allowFingerDrag {
+                    isDragging = true
+                    dragOffset = value.translation
+                }
+            }
+            .onEnded { value in
+                if card.isEditing && card.allowFingerDrag && isDragging {
+                    // Update card position
+                    let newPosition = CGPoint(
+                        x: card.position.x + (value.translation.width / canvasScale),
+                        y: card.position.y + (value.translation.height / canvasScale)
+                    )
+                    card.position = newPosition
+                    dragOffset = .zero
+                    isDragging = false
+                }
+            }
     }
 }
 
@@ -123,9 +196,9 @@ struct CardMenuButton: View {
         } label: {
             Image(systemName: "ellipsis")
                 .foregroundColor(.white)
-                .font(.system(size: 24))
-                .frame(width: 44, height: 44)
-                .background(Circle().fill(Color.blue.opacity(0.6)))
+                .font(.system(size: 16))
+                .frame(width: 32, height: 32)
+                .background(Circle().fill(Color.blue.opacity(0.8)))
         }
     }
 }

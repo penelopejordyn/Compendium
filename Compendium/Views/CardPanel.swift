@@ -49,6 +49,9 @@ struct CardPanel: View {
                                     },
                                     onDelete: {
                                         onCardDeleted(card.id)
+                                    },
+                                    onLockToggle: {
+                                        toggleCardLock(card)
                                     }
                                 )
                             }
@@ -125,6 +128,7 @@ struct CardPanel: View {
         let onTap: () -> Void
         let onColorChanged: (Color) -> Void
         let onDelete: () -> Void
+        let onLockToggle: () -> Void
         
         @State private var showingColorPicker = false
         
@@ -173,6 +177,13 @@ struct CardPanel: View {
                     onTap()
                 } label: {
                     Label("Go to Card", systemImage: "arrow.forward.circle")
+                }
+                
+                Button {
+                    onLockToggle()
+                } label: {
+                    Label(card.isLocked ? "Unlock Card" : "Lock Card",
+                          systemImage: card.isLocked ? "lock.open" : "lock")
                 }
                 
                 Button {
@@ -231,6 +242,13 @@ struct CardPanel: View {
         if let index = cards.firstIndex(where: { $0.id == card.id }) {
             // Update the card's background in the cards array
             cards[index].background = newBackground
+        }
+    }
+    
+    private func toggleCardLock(_ card: Card) {
+        if let index = cards.firstIndex(where: { $0.id == card.id }) {
+            // Toggle the locked state of the card
+            cards[index].isLocked.toggle()
         }
     }
 }
